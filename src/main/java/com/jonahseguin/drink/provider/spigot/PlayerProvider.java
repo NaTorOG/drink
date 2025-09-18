@@ -55,8 +55,8 @@ public class PlayerProvider extends DrinkProvider<Player> {
     @Override
     public Player provide(@Nonnull CommandArg arg, @Nonnull List<? extends Annotation> annotations) throws CommandExitMessage {
         final var sender = arg.getSender();
-        final var name = arg.get().toLowerCase();
-        final var target = getTarget(name, sender.getName());
+        final var name = arg.get();
+        final var target = getTarget(name);
 
         if(target == null){
             final String message = (providerMessages.containsKey(ProviderMessage.PLAYER))
@@ -112,14 +112,27 @@ public class PlayerProvider extends DrinkProvider<Player> {
         return false;
     }
 
-    private @Nullable Player getTarget(final @NotNull String target, final @NotNull String executor){
-        return Bukkit.getOnlinePlayers()
-                .stream()
-                .filter(player -> {
-                    final var playerName = player.getName().toLowerCase();
-                    return playerName.equalsIgnoreCase(target) || playerName.startsWith(target) || playerName.contains(target);
-                } )
-                .findFirst()
-                .orElse(null);
+    private @Nullable Player getTarget(final @NotNull String target){
+        final Collection<? extends Player> players = Bukkit.getOnlinePlayers();
+
+        for (final Player player : players) {
+            if (player.getName().equalsIgnoreCase(target)) {
+                return player;
+            }
+        }
+
+        for (final Player player : players) {
+            if (player.getName().toLowerCase().startsWith(target.toLowerCase())) {
+                return player;
+            }
+        }
+
+        for (final Player player : players) {
+            if (player.getName().toLowerCase().contains(target.toLowerCase())) {
+                return player;
+            }
+        }
+
+        return null;
     }
 }
