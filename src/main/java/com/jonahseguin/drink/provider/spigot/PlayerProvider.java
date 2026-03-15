@@ -1,5 +1,6 @@
 package com.jonahseguin.drink.provider.spigot;
 
+import com.google.common.base.Strings;
 import com.jonahseguin.drink.annotation.OptArg;
 import com.jonahseguin.drink.argument.CommandArg;
 import com.jonahseguin.drink.exception.CommandExitMessage;
@@ -89,18 +90,26 @@ public class PlayerProvider extends DrinkProvider<Player> {
     }
 
     @Override
-    public List<String> getSuggestions(@Nonnull String prefix) {
-        final String finalPrefix = prefix.toLowerCase();
+    @SuppressWarnings("deprecation")
+    public List<String> getSuggestions(@Nonnull String input) {
+        final String finalPrefix = input.toLowerCase();
+
+        if(Strings.isNullOrEmpty(input)) return List.of();
         
-        Collection<? extends Player> onlinePlayers = new CopyOnWriteArrayList<>(
+        Collection<? extends Player> onlinePlayers = List.copyOf(
                 plugin.getServer().getOnlinePlayers()
         );
 
+
         return onlinePlayers.stream()
                 .filter(player -> !isVanished(player))
+                .filter(player -> {
+                    var name = player.getName().toLowerCase();
+                    var displayName = player.getDisplayName().toLowerCase();
+                    return name.startsWith(finalPrefix) || displayName.startsWith(finalPrefix);
+                })
                 .map(HumanEntity::getName)
-                .filter(s -> finalPrefix.isEmpty() || s.toLowerCase().startsWith(finalPrefix))
-                .collect(Collectors.toCollection(CopyOnWriteArrayList::new));
+                .toList();
     }
 
     private boolean isVanished(final @NotNull Player player){
@@ -112,27 +121,23 @@ public class PlayerProvider extends DrinkProvider<Player> {
         return false;
     }
 
-    private @Nullable Player getTarget(final @NotNull String target){
+    @SuppressWarnings("deprecation")
+    private @Nullable Player getTarget(final @NotNull String input){
         final Collection<? extends Player> players = Bukkit.getOnlinePlayers();
 
         for (final Player player : players) {
-            if (player.getName().equalsIgnoreCase(target)) {
-                return player;
-            }
-        }
+            var name = player.getName();
+            var displayName = player.getDisplayName();
 
-        for (final Player player : players) {
-            if (player.getName().toLowerCase().startsWith(target.toLowerCase())) {
-                return player;
-            }
-        }
-
-        for (final Player player : players) {
-            if (player.getName().toLowerCase().contains(target.toLowerCase())) {
-                return player;
-            }
+            return matchesName(name, input) || matchesName(displayName, input) ? player : null;
         }
 
         return null;
+    }
+
+    private boolean matchesName(String name, String input){
+        return name.equalsIgnoreCase(input)
+                || name.toLowerCase().startsWith(input.toLowerCase())
+                || name.toLowerCase().contains(input.toLowerCase());
     }
 }
